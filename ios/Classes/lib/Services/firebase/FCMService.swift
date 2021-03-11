@@ -10,7 +10,7 @@ import Foundation
 //@available(iOS 10.0, *)
 class FCMService {
     
-    /*
+    
     public func didReceive(_ content: UNMutableNotificationContent, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
         
         // Modify the notification content here...
@@ -27,6 +27,9 @@ class FCMService {
         
         return nil
     }
-    */
+    
+    
+    
+    
     
 }
