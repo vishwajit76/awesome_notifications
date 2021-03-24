@@ -1,12 +1,12 @@
 
 import UIKit
 import Flutter
-import FirebaseCore
-import FirebaseMessaging
+//import FirebaseCore
+//import FirebaseMessaging
 import BackgroundTasks
 import UserNotifications
 
-public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNotificationCenterDelegate, MessagingDelegate {
+public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNotificationCenterDelegate/*, MessagingDelegate*/ {
     
     private static var _instance:SwiftAwesomeNotificationsPlugin?
     
@@ -31,6 +31,7 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         return true
     }
     
+	/*
     public func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) -> Bool {
         
         do {
@@ -83,31 +84,35 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         
         return true
     }
+	
+	*/
     
-    public func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
-        let jsonData:String? = notification.userInfo?[Definitions.NOTIFICATION_JSON] as? String
+//     public func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
+//         let jsonData:String? = notification.userInfo?[Definitions.NOTIFICATION_JSON] as? String
         
-        receiveAction(
-            jsonData: jsonData,
-            actionKey: nil,
-            userText: nil
-        )
-    }
+//         receiveAction(
+//             jsonData: jsonData,
+//             actionKey: nil,
+//             userText: nil
+//         )
+//     }
     
     public func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Messaging.messaging().apnsToken = deviceToken
-        if let token = requestFirebaseToken() {
-            flutterChannel?.invokeMethod(Definitions.CHANNEL_METHOD_NEW_FCM_TOKEN, arguments: token)
-        }
+//         Messaging.messaging().apnsToken = deviceToken
+//         if let token = requestFirebaseToken() {
+//             flutterChannel?.invokeMethod(Definitions.CHANNEL_METHOD_NEW_FCM_TOKEN, arguments: token)
+//         }
     }
 
     // For Firebase Messaging versions older than 7.0
     // https://github.com/rafaelsetragni/awesome_notifications/issues/39
+	/*
     public func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String) {
         
         didReceiveRegistrationToken(messaging, fcmToken: fcmToken)
     }
     
+	
     public func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         
         if let unwrapped = fcmToken {
@@ -123,6 +128,8 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         
         flutterChannel?.invokeMethod(Definitions.CHANNEL_METHOD_NEW_FCM_TOKEN, arguments: fcmToken)
     }
+	
+	*/
     
     @available(iOS 10.0, *)
     public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
@@ -131,9 +138,16 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         if let textResponse =  response as? UNTextInputNotificationResponse {
             userText =  textResponse.userText
         }
+	    
+	 guard let jsonData:String = response.notification.request.content.userInfo[Definitions.NOTIFICATION_JSON] as? String else {
+                
+            print("Received an invalid notification content")
+            completionHandler()
+            return;
+        }
         
         receiveAction(
-            jsonData: response.notification.request.content.userInfo[Definitions.NOTIFICATION_JSON] as? String,
+            jsonData: jsonData, //response.notification.request.content.userInfo[Definitions.NOTIFICATION_JSON] as? String,
             actionKey: response.actionIdentifier,
             userText: userText
         )
@@ -147,7 +161,10 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
     }
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [AnyHashable : Any] = [:]) -> Bool {
-        enableFirebase(application)
+	    
+	UNUserNotificationCenter.current().delegate = self
+	    
+        //enableFirebase(application)
         enableScheduler(application)
         
         return true
@@ -163,13 +180,14 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         return true
     }
     
+	/*
     private func requestFirebaseToken() -> String? {
         if let token = SwiftAwesomeNotificationsPlugin.firebaseDeviceToken ?? Messaging.messaging().fcmToken {
             SwiftAwesomeNotificationsPlugin.firebaseDeviceToken = token
             return token
         }
         return nil
-    }
+    }*/
     
     private func enableScheduler(_ application: UIApplication){
         if !SwiftUtils.isRunningOnExtension() {
@@ -247,6 +265,7 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         SwiftAwesomeNotificationsPlugin.rescheduleBackgroundTask()
     }
     
+	/*
     private func enableFirebase(_ application: UIApplication){
         guard let firebaseConfigPath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") else {
             return
@@ -261,6 +280,7 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
             SwiftAwesomeNotificationsPlugin.firebaseEnabled = true
         }
     }
+	*/
     
     @available(iOS 10.0, *)
     private func receiveNotification(content:UNNotificationContent, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void){
@@ -268,15 +288,18 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         let jsonData:String? = content.userInfo[Definitions.NOTIFICATION_JSON] as? String
         let pushNotification:PushNotification? = NotificationBuilder.jsonToPushNotification(jsonData: jsonData)
         
-        if(pushNotification == nil){
+	guard let pushNotification:PushNotification = NotificationBuilder.jsonToPushNotification(jsonData: jsonData)
+        else {
+        //if(pushNotification == nil){
             Log.d("receiveNotification","notification discarted")
             completionHandler([])
             return
         }
         
+	    /*
         if(content.userInfo["updated"] == nil){
             
-            pushNotification!.content!.displayedLifeCycle = SwiftAwesomeNotificationsPlugin.appLifeCycle
+            //pushNotification!.content!.displayedLifeCycle = SwiftAwesomeNotificationsPlugin.appLifeCycle
             
             let pushData = pushNotification!.toMap()
             let updatedJsonData = JsonUtils.toJson(pushData)
@@ -301,11 +324,14 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
             completionHandler([])
             return
         }
+	    */
     
-        let notificationReceived:NotificationReceived? = NotificationReceived(pushNotification?.content)
+        let notificationReceived:NotificationReceived? = NotificationReceived(pushNotification.content)
         if(notificationReceived != nil){
                         
-            let channel:NotificationChannelModel? = ChannelManager.getChannelByKey(channelKey: pushNotification!.content!.channelKey!)
+	    pushNotification.content!.displayedLifeCycle = SwiftAwesomeNotificationsPlugin.appLifeCycle
+            
+            let channel:NotificationChannelModel? = ChannelManager.getChannelByKey(channelKey: pushNotification.content!.channelKey!)
             
             alertOnlyOnceNotification(
                 channel?.onlyAlertOnce,
@@ -321,6 +347,7 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
             
             SwiftAwesomeNotificationsPlugin.displayEvent(notificationReceived: notificationReceived!)
             
+		/*
             if(pushNotification?.schedule != nil){
                                 
                 do {
@@ -335,6 +362,8 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
                     // Fallback on earlier versions
                 }
             }
+		
+		*/
         }
     }
     
@@ -392,7 +421,7 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
         if #available(iOS 10.0, *) {
             let actionReceived:ActionReceived? = NotificationBuilder.buildNotificationActionFromJson(jsonData: jsonData, actionKey: actionKey, userText: userText)
             
-            if actionReceived!.dismissedDate == nil {
+            if actionReceived?.dismissedDate == nil {
                 Log.d(SwiftAwesomeNotificationsPlugin.TAG, "NOTIFICATION RECEIVED")
                 flutterChannel?.invokeMethod(Definitions.CHANNEL_METHOD_RECEIVED_ACTION, arguments: actionReceived?.toMap())
             }
@@ -454,8 +483,9 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
     public func applicationWillResignActive(_ application: UIApplication) {
         //debugPrint("applicationWillResignActive")
         
-        SwiftAwesomeNotificationsPlugin.didIRealyGoneBackground = false
+        
         SwiftAwesomeNotificationsPlugin.appLifeCycle = NotificationLifeCycle.Background
+	SwiftAwesomeNotificationsPlugin.didIRealyGoneBackground = false
     }
     
     public func applicationDidEnterBackground(_ application: UIApplication) {
@@ -544,12 +574,13 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
                 
         SwiftAwesomeNotificationsPlugin.registrar = registrar
         
+	    /*
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().delegate = self
             if(SwiftAwesomeNotificationsPlugin.firebaseEnabled){
                 Messaging.messaging().delegate = self
             }
-        }
+        }*/
         
         if !SwiftUtils.isRunningOnExtension() {
             UIApplication.shared.registerForRemoteNotifications()
@@ -760,13 +791,19 @@ public class SwiftAwesomeNotificationsPlugin: NSObject, FlutterPlugin, UNUserNot
     }
     
     private func channelMethodGetFcmToken(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let token = requestFirebaseToken()
-        result(token)
+        //let token = requestFirebaseToken()
+        //result(token)
+	    return(nil);
     }
 		
     private func channelMethodIsFcmAvailable(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let token = requestFirebaseToken()
-        result(!StringUtils.isNullOrEmpty(token))
+        //let token = requestFirebaseToken()
+        //result(!StringUtils.isNullOrEmpty(token))
+	    result(FlutterError.init(
+            code: "Method deprecated",
+            message: "Method deprecated",
+            details: "channelMethodGetFcmToken"
+        ))
     }
     
     private func channelMethodIsNotificationAllowed(call: FlutterMethodCall, result: @escaping FlutterResult) {
